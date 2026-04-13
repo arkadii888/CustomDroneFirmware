@@ -1,7 +1,10 @@
+#include <cstdint>
 #include <iostream>
+#include <sys/types.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/spi_master.h"
+#include "driver/gpio.h"
 
 #include "I2C.h"
 #include "Battery.h"
@@ -31,8 +34,28 @@ extern "C" void app_main(void)
     devcfg.spics_io_num = 46;
     devcfg.queue_size = 7;
 
-    spi_device_handle_t spi_handle;
-    ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &devcfg, &spi_handle));
+    spi_device_handle_t bmi270_handle;
+    ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &devcfg, &bmi270_handle));
+
+    // PMW3901MB Sleep
+    gpio_set_direction(static_cast<gpio_num_t>(12), GPIO_MODE_OUTPUT);
+    gpio_set_level(static_cast<gpio_num_t>(12), 1);
+
+    // Check BMI270 Communication
+    spi_transaction_t t = {};
+    t.length = 24;
+    t.tx_data[0] = 0x80;
+    t.tx_data[1] = 0x00;
+    t.tx_data[2] = 0x00;
+    t.flags = SPI_TRANS_USE_RXDATA | SPI_TRANS_USE_TXDATA;
+
+    auto err = spi_device_transmit(bmi270_handle, &t);
+    if(err == ESP_OK) {
+        std::cout << "BMI270 check: 0x" << std::hex << static_cast<int>(t.rx_data[2]) << std::endl;
+    }
+    else {
+        std::cout << "BMI270 check error!" << std::endl;
+    }
 
     std::cout << "Init finished!" << std::endl;
 
