@@ -1,0 +1,103 @@
+#include "BMI270.h"
+
+#include "bmi270_config.h"
+#include "esp_heap_caps.h"
+#include <cstdlib>
+#include <iostream>
+#include <cstring>
+
+#include "bmi270_config.h"
+
+BMI270::BMI270() {
+    spi_device_interface_config_t config = {};
+    config.clock_speed_hz = 1000000;
+    config.mode = 0;
+    config.spics_io_num = 46;
+    config.queue_size = 7;
+
+    ESP_ERROR_CHECK(spi_bus_add_device(SPI2_HOST, &config, &handle));
+
+    CheckCommunication();
+    DisablePowersave();
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+    PrepareForConfigUpload();
+    UploadConfig();
+    UnpackConfig();
+    vTaskDelay(150 / portTICK_PERIOD_MS);
+    CheckConfigUploadStatus();
+}
+
+void BMI270::CheckCommunication() {
+    spi_transaction_t t = {};
+    t.length = 24;
+    t.tx_data[0] = 0x80;
+    t.tx_data[1] = 0x00;
+    t.tx_data[2] = 0x00;
+    t.flags = SPI_TRANS_USE_RXDATA | SPI_TRANS_USE_TXDATA;
+
+    ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
+    std::cout << "BMI270::CheckCommunication: 0x" << std::hex << static_cast<int>(t.rx_data[2]) << std::endl;
+}
+
+void BMI270::DisablePowersave() {
+    spi_transaction_t t = {};
+    t.length = 16;
+    t.tx_data[0] = 0x7C & 0x7F;
+    t.tx_data[1] = 0x00;
+    t.flags = SPI_TRANS_USE_TXDATA;
+
+    ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
+}
+
+void BMI270::PrepareForConfigUpload() {
+    spi_transaction_t t = {};
+    t.length = 16;
+    t.tx_data[0] = 0x59 & 0x7F;
+    t.tx_data[1] = 0x00;
+    t.flags = SPI_TRANS_USE_TXDATA;
+
+    ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
+}
+
+void BMI270::UploadConfig() {
+    uint8_t* buffer = static_cast<uint8_t*>(heap_caps_malloc(8193, MALLOC_CAP_DMA));
+    memcpy(buffer, bmi270_config_file, 8193);
+
+    spi_transaction_t t = {};
+    t.length = 8193 * 8;
+    t.tx_buffer = buffer;
+
+    auto err = spi_device_transmit(handle, &t);
+    free(buffer);
+    if(err != ESP_OK) {
+        std::cout << "BMI270::UploadConfig Error: " << esp_err_to_name(err) << std::endl;
+        abort();
+    }
+}
+
+void BMI270::UnpackConfig() {
+    spi_transaction_t t = {};
+    t.length = 16;
+    t.tx_data[0] = 0x59 & 0x7F;
+    t.tx_data[1] = 0x01;
+    t.flags = SPI_TRANS_USE_TXDATA;
+
+    ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
+}
+
+void BMI270::CheckConfigUploadStatus() {
+    spi_transaction_t t = {};
+    t.length = 24;
+    t.tx_data[0] = 0x21 | 0x80;
+    t.tx_data[1] = 0x00;
+    t.tx_data[2] = 0x00;
+    t.flags = SPI_TRANS_USE_RXDATA | SPI_TRANS_USE_TXDATA;
+
+    ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
+
+    std::cout << "BMI270::CheckConfigUploadStatus: 0x" << std::hex << static_cast<int>(t.rx_data[2]) << std::dec << std::endl;
+
+    if(t.rx_data[2] == 0x01) {
+        std::cout << "BMI270::CheckConfigUploadStatus Success!" << std::endl;
+    }
+}
