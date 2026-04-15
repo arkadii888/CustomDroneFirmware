@@ -14,6 +14,7 @@ struct BMI270Data {
 class BMI270 {
 public:
     BMI270();
+    ~BMI270();
 
     BMI270Data GetData();
 
@@ -30,4 +31,6 @@ private:
 
 private:
     spi_device_handle_t handle;
+    uint8_t* tx_buffer = nullptr;
+    uint8_t* rx_buffer = nullptr;
 };

@@ -36,6 +36,17 @@ BMI270::BMI270() {
     ConfigGyroscope();
     DisablePowersave(0x02);
     vTaskDelay(150 / portTICK_PERIOD_MS);
+
+    // Allocate Memory for GetData()
+    tx_buffer = static_cast<uint8_t*>(heap_caps_calloc(14, 1, MALLOC_CAP_DMA));
+    rx_buffer = static_cast<uint8_t*>(heap_caps_calloc(14, 1, MALLOC_CAP_DMA));
+    tx_buffer[0] = 0x0C | 0x80;
+}
+
+BMI270::~BMI270() {
+    // Free Memory for GetData()
+    free(tx_buffer);
+    free(rx_buffer);
 }
 
 void BMI270::CheckCommunication() {
@@ -144,23 +155,12 @@ void BMI270::ConfigGyroscope() {
 }
 
 BMI270Data BMI270::GetData() {
-    uint8_t* tx_buffer = static_cast<uint8_t*>(heap_caps_calloc(14, 1, MALLOC_CAP_DMA));
-    uint8_t* rx_buffer = static_cast<uint8_t*>(heap_caps_calloc(14, 1, MALLOC_CAP_DMA));
-
-    tx_buffer[0] = 0x0C | 0x80;
-
     spi_transaction_t t = {};
     t.length = 14 * 8;
     t.tx_buffer = tx_buffer;
     t.rx_buffer = rx_buffer;
 
-    auto err = spi_device_transmit(handle, &t);
-    if(err != ESP_OK) {
-        free(tx_buffer);
-        free(rx_buffer);
-        std::cout << "BMI270::UploadConfig Error: " << esp_err_to_name(err) << std::endl;
-        abort();
-    }
+    ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 
     BMI270Data data;
     data.acc_x = (rx_buffer[3] << 8) | rx_buffer[2];
@@ -169,9 +169,6 @@ BMI270Data BMI270::GetData() {
     data.gyr_x = (rx_buffer[9] << 8) | rx_buffer[8];
     data.gyr_y = (rx_buffer[11] << 8) | rx_buffer[10];
     data.gyr_z = (rx_buffer[13] << 8) | rx_buffer[12];
-
-    free(tx_buffer);
-    free(rx_buffer);
 
     return data;
 }
