@@ -2,11 +2,20 @@
 
 #include "driver/spi_master.h"
 
+struct BMI270Data {
+    int16_t acc_x = 0;
+    int16_t acc_y = 0;
+    int16_t acc_z = 0;
+    int16_t gyr_x = 0;
+    int16_t gyr_y = 0;
+    int16_t gyr_z = 0;
+};
+
 class BMI270 {
 public:
     BMI270();
 
-    void PrintData();
+    BMI270Data GetData();
 
 private:
     void CheckCommunication();

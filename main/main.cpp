@@ -27,9 +27,19 @@ extern "C" void app_main(void)
     std::cout << "Init finished!" << std::endl;
 
     while (true) {
-        bmi270.PrintData();
-        std::cout << "Battery voltage: " << battery.GetVoltage() << " V" << std::endl;
-        std::cout << "Battery current: " << battery.GetCurrent() << " A" << std::endl;
+        BMI270Data bmi270Data = bmi270.GetData();
+        std::cout << "Accelerometer Data:" << std::endl;
+        std::cout << "Acc_X: " << bmi270Data.acc_x << std::endl;
+        std::cout << "Acc_Y: " << bmi270Data.acc_y << std::endl;
+        std::cout << "Acc_Z: " << bmi270Data.acc_z << std::endl;
+
+        std::cout << "Gyroscope Data:" << std::endl;
+        std::cout << "Gyr_X: " << bmi270Data.gyr_x << std::endl;
+        std::cout << "Gyr_Y: " << bmi270Data.gyr_y << std::endl;
+        std::cout << "Gyr_Z: " << bmi270Data.gyr_z << std::endl;
+
+        std::cout << "Battery Voltage: " << battery.GetVoltage() << " V" << std::endl;
+        std::cout << "Battery Current: " << battery.GetCurrent() << " A" << std::endl;
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }

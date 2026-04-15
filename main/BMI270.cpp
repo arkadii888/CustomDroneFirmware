@@ -143,7 +143,7 @@ void BMI270::ConfigGyroscope() {
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 }
 
-void BMI270::PrintData() {
+BMI270Data BMI270::GetData() {
     uint8_t* tx_buffer = static_cast<uint8_t*>(heap_caps_calloc(14, 1, MALLOC_CAP_DMA));
     uint8_t* rx_buffer = static_cast<uint8_t*>(heap_caps_calloc(14, 1, MALLOC_CAP_DMA));
 
@@ -162,24 +162,16 @@ void BMI270::PrintData() {
         abort();
     }
 
-    int16_t acc_x = (rx_buffer[3] << 8) | rx_buffer[2];
-    int16_t acc_y = (rx_buffer[5] << 8) | rx_buffer[4];
-    int16_t acc_z = (rx_buffer[7] << 8) | rx_buffer[6];
-
-    int16_t gyr_x = (rx_buffer[9] << 8) | rx_buffer[8];
-    int16_t gyr_y = (rx_buffer[11] << 8) | rx_buffer[10];
-    int16_t gyr_z = (rx_buffer[13] << 8) | rx_buffer[12];
+    BMI270Data data;
+    data.acc_x = (rx_buffer[3] << 8) | rx_buffer[2];
+    data.acc_y = (rx_buffer[5] << 8) | rx_buffer[4];
+    data.acc_z = (rx_buffer[7] << 8) | rx_buffer[6];
+    data.gyr_x = (rx_buffer[9] << 8) | rx_buffer[8];
+    data.gyr_y = (rx_buffer[11] << 8) | rx_buffer[10];
+    data.gyr_z = (rx_buffer[13] << 8) | rx_buffer[12];
 
     free(tx_buffer);
     free(rx_buffer);
 
-    std::cout << "BMI270::PrintData: Accelerometer Data" << std::endl;
-    std::cout << "Acc_X: " << acc_x << std::endl;
-    std::cout << "Acc_Y: " << acc_y << std::endl;
-    std::cout << "Acc_Z: " << acc_z << std::endl;
-
-    std::cout << "BMI270::PrintData: Gyroscope Data" << std::endl;
-    std::cout << "Gyr_X: " << gyr_x << std::endl;
-    std::cout << "Gyr_Y: " << gyr_y << std::endl;
-    std::cout << "Gyr_Z: " << gyr_z << std::endl;
+    return data;
 }
