@@ -27,6 +27,7 @@ extern "C" void app_main(void)
     std::cout << "Init finished!" << std::endl;
 
     while (true) {
+        bmi270.PrintData();
         std::cout << "Battery voltage: " << battery.GetVoltage() << " V" << std::endl;
         std::cout << "Battery current: " << battery.GetCurrent() << " A" << std::endl;
         vTaskDelay(500 / portTICK_PERIOD_MS);
