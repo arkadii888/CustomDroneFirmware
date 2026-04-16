@@ -1,15 +1,13 @@
-#include "BMI270.h"
+#include "IMU.h"
 
-#include "bmi270_config.h"
+#include "IMUConfig.h"
 #include "esp_heap_caps.h"
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <cstring>
 
-#include "bmi270_config.h"
-
-BMI270::BMI270() {
+IMU::IMU() {
     spi_device_interface_config_t config = {};
     config.clock_speed_hz = 1000000;
     config.mode = 0;
@@ -43,13 +41,13 @@ BMI270::BMI270() {
     tx_buffer[0] = 0x0C | 0x80;
 }
 
-BMI270::~BMI270() {
+IMU::~IMU() {
     // Free Memory for GetData()
     free(tx_buffer);
     free(rx_buffer);
 }
 
-void BMI270::CheckCommunication() {
+void IMU::CheckCommunication() {
     spi_transaction_t t = {};
     t.length = 24;
     t.tx_data[0] = 0x80;
@@ -58,10 +56,10 @@ void BMI270::CheckCommunication() {
     t.flags = SPI_TRANS_USE_RXDATA | SPI_TRANS_USE_TXDATA;
 
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
-    std::cout << "BMI270::CheckCommunication: 0x" << std::hex << static_cast<int>(t.rx_data[2]) << std::endl;
+    std::cout << "IMU::CheckCommunication: 0x" << std::hex << static_cast<int>(t.rx_data[2]) << std::endl;
 }
 
-void BMI270::DisablePowersave(const uint8_t value) {
+void IMU::DisablePowersave(const uint8_t value) {
     spi_transaction_t t = {};
     t.length = 16;
     t.tx_data[0] = 0x7C & 0x7F;
@@ -71,7 +69,7 @@ void BMI270::DisablePowersave(const uint8_t value) {
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 }
 
-void BMI270::PrepareForConfigUpload() {
+void IMU::PrepareForConfigUpload() {
     spi_transaction_t t = {};
     t.length = 16;
     t.tx_data[0] = 0x59 & 0x7F;
@@ -81,9 +79,9 @@ void BMI270::PrepareForConfigUpload() {
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 }
 
-void BMI270::UploadConfig() {
+void IMU::UploadConfig() {
     uint8_t* buffer = static_cast<uint8_t*>(heap_caps_malloc(8193, MALLOC_CAP_DMA));
-    memcpy(buffer, bmi270_config_file, 8193);
+    memcpy(buffer, imuConfig, 8193);
 
     spi_transaction_t t = {};
     t.length = 8193 * 8;
@@ -92,12 +90,12 @@ void BMI270::UploadConfig() {
     auto err = spi_device_transmit(handle, &t);
     free(buffer);
     if(err != ESP_OK) {
-        std::cout << "BMI270::UploadConfig Error: " << esp_err_to_name(err) << std::endl;
+        std::cout << "IMU::UploadConfig Error: " << esp_err_to_name(err) << std::endl;
         abort();
     }
 }
 
-void BMI270::UnpackConfig() {
+void IMU::UnpackConfig() {
     spi_transaction_t t = {};
     t.length = 16;
     t.tx_data[0] = 0x59 & 0x7F;
@@ -107,7 +105,7 @@ void BMI270::UnpackConfig() {
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 }
 
-void BMI270::CheckConfigUploadStatus() {
+void IMU::CheckConfigUploadStatus() {
     spi_transaction_t t = {};
     t.length = 24;
     t.tx_data[0] = 0x21 | 0x80;
@@ -117,14 +115,14 @@ void BMI270::CheckConfigUploadStatus() {
 
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 
-    std::cout << "BMI270::CheckConfigUploadStatus: 0x" << std::hex << static_cast<int>(t.rx_data[2]) << std::dec << std::endl;
+    std::cout << "IMU::CheckConfigUploadStatus: 0x" << std::hex << static_cast<int>(t.rx_data[2]) << std::dec << std::endl;
 
     if(t.rx_data[2] == 0x01) {
-        std::cout << "BMI270::CheckConfigUploadStatus Success!" << std::endl;
+        std::cout << "IMU::CheckConfigUploadStatus Success!" << std::endl;
     }
 }
 
-void BMI270::EnableSensors() {
+void IMU::EnableSensors() {
     spi_transaction_t t = {};
     t.length = 16;
     t.tx_data[0] = 0x7D & 0x7F;
@@ -134,7 +132,7 @@ void BMI270::EnableSensors() {
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 }
 
-void BMI270::ConfigAccelerometer() {
+void IMU::ConfigAccelerometer() {
     spi_transaction_t t = {};
     t.length = 16;
     t.tx_data[0] = 0x40 & 0x7F;
@@ -144,7 +142,7 @@ void BMI270::ConfigAccelerometer() {
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 }
 
-void BMI270::ConfigGyroscope() {
+void IMU::ConfigGyroscope() {
     spi_transaction_t t = {};
     t.length = 16;
     t.tx_data[0] = 0x42 & 0x7F;
@@ -154,7 +152,7 @@ void BMI270::ConfigGyroscope() {
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 }
 
-BMI270Data BMI270::GetData() {
+IMUData IMU::GetData() {
     spi_transaction_t t = {};
     t.length = 14 * 8;
     t.tx_buffer = tx_buffer;
@@ -162,7 +160,7 @@ BMI270Data BMI270::GetData() {
 
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 
-    BMI270Data data;
+    IMUData data;
     data.acc_x = (rx_buffer[3] << 8) | rx_buffer[2];
     data.acc_y = (rx_buffer[5] << 8) | rx_buffer[4];
     data.acc_z = (rx_buffer[7] << 8) | rx_buffer[6];

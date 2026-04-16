@@ -2,7 +2,7 @@
 
 #include "driver/spi_master.h"
 
-struct BMI270Data {
+struct IMUData {
     int16_t acc_x = 0;
     int16_t acc_y = 0;
     int16_t acc_z = 0;
@@ -11,12 +11,13 @@ struct BMI270Data {
     int16_t gyr_z = 0;
 };
 
-class BMI270 {
+// BMI270
+class IMU {
 public:
-    BMI270();
-    ~BMI270();
+    IMU();
+    ~IMU();
 
-    BMI270Data GetData();
+    IMUData GetData();
 
 private:
     void CheckCommunication();

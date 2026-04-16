@@ -2,9 +2,10 @@
 
 #include "driver/i2c_master.h"
 
-class Battery {
+// INA3221AIRGVR
+class VoltageMonitor {
 public:
-    Battery(i2c_master_bus_handle_t i2c);
+    VoltageMonitor(i2c_master_bus_handle_t i2c);
 
     float GetVoltage() const;
     float GetCurrent() const;

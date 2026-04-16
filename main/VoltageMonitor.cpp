@@ -1,6 +1,6 @@
-#include "Battery.h"
+#include "VoltageMonitor.h"
 
-Battery::Battery(i2c_master_bus_handle_t i2c) {
+VoltageMonitor::VoltageMonitor(i2c_master_bus_handle_t i2c) {
     i2c_device_config_t config = {};
     config.dev_addr_length = I2C_ADDR_BIT_LEN_7;
     config.device_address = 0x40;
@@ -9,7 +9,7 @@ Battery::Battery(i2c_master_bus_handle_t i2c) {
     ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c, &config, &handle));
 }
 
-float Battery::GetVoltage() const {
+float VoltageMonitor::GetVoltage() const {
     uint8_t reg_addr = 0x04;
     uint8_t raw_data[2] = {0};
 
@@ -23,7 +23,7 @@ float Battery::GetVoltage() const {
     return 0.0f;
 }
 
-float Battery::GetCurrent() const {
+float VoltageMonitor::GetCurrent() const {
     uint8_t reg_addr = 0x03;
     uint8_t raw_data[2] = {0};
 
