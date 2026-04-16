@@ -11,7 +11,13 @@
 #include "IMU.h"
 #include "AccessPoint.h"
 
+struct CommunicationContext {
+    VoltageMonitor* voltageMonitor = nullptr;
+};
+
 void Communication(void *pvParameters) {
+    auto context = static_cast<CommunicationContext*>(pvParameters);
+
     int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
     sockaddr_in server;
@@ -34,12 +40,20 @@ void Communication(void *pvParameters) {
             const char* reply = "Alive";
             sendto(s, reply, strlen(reply), 0, reinterpret_cast<sockaddr*>(&client), socklen);
         }
+        if(recivedCode == 2) {
+            if(context == nullptr || context->voltageMonitor == nullptr) {
+                std::cout << "Communication: Code 2 Error" << std::endl;
+                continue;
+            }
+            float reply[2] = {context->voltageMonitor->GetVoltage(), context->voltageMonitor->GetCurrent()};
+            sendto(s, reply, sizeof(reply), 0, reinterpret_cast<sockaddr*>(&client), socklen);
+        }
     }
 }
 
 extern "C" void app_main(void)
 {
-    std::cout << "Init Started!" << std::endl;
+    std::cout << "Good Morning!" << std::endl;
 
     I2C i2c;
     VoltageMonitor voltageMonitor(i2c.GetHandle());
@@ -53,10 +67,11 @@ extern "C" void app_main(void)
 
     AccessPoint accessPoint;
 
-    std::cout << "Init Finished!" << std::endl;
+    CommunicationContext context;
+    context.voltageMonitor = &voltageMonitor;
 
     // Communication Thread
-    xTaskCreatePinnedToCore(Communication, "Communication", 4096, nullptr, 5, nullptr, 0);
+    xTaskCreatePinnedToCore(Communication, "Communication", 4096, &context, 5, nullptr, 0);
 
     // Flight Thread
     while (true) {
