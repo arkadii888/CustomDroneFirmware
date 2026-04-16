@@ -1,17 +1,15 @@
-#include <cstdint>
 #include <iostream>
 #include <sys/types.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-
 #include "lwip/sockets.h"
 
 #include "I2C.h"
 #include "VoltageMonitor.h"
 #include "SPI.h"
 #include "IMU.h"
-#include "Wifi.h"
+#include "AccessPoint.h"
 
 void Communication(void *pvParameters) {
     int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
@@ -46,15 +44,14 @@ extern "C" void app_main(void)
     I2C i2c;
     VoltageMonitor voltageMonitor(i2c.GetHandle());
 
-    SPI spi;
-
     // PMW3901MB Sleep
     gpio_set_direction(static_cast<gpio_num_t>(12), GPIO_MODE_OUTPUT);
     gpio_set_level(static_cast<gpio_num_t>(12), 1);
 
+    SPI spi;
     IMU imu;
 
-    Wifi wifi;
+    AccessPoint accessPoint;
 
     std::cout << "Init Finished!" << std::endl;
 
