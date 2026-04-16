@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
+#include "hal/ledc_types.h"
 #include "lwip/sockets.h"
 
 #include "I2C.h"
@@ -10,6 +11,7 @@
 #include "SPI.h"
 #include "IMU.h"
 #include "AccessPoint.h"
+#include "Motor.h"
 
 struct CommunicationContext {
     VoltageMonitor* voltageMonitor = nullptr;
@@ -59,8 +61,8 @@ extern "C" void app_main(void)
     VoltageMonitor voltageMonitor(i2c.GetHandle());
 
     // PMW3901MB Sleep
-    gpio_set_direction(static_cast<gpio_num_t>(12), GPIO_MODE_OUTPUT);
-    gpio_set_level(static_cast<gpio_num_t>(12), 1);
+    gpio_set_direction(GPIO_NUM_12, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_NUM_12, 1);
 
     SPI spi;
     IMU imu;
@@ -70,21 +72,22 @@ extern "C" void app_main(void)
     CommunicationContext context;
     context.voltageMonitor = &voltageMonitor;
 
+    Motor motorLU(GPIO_NUM_5, LEDC_CHANNEL_0);
+    Motor motorLD(GPIO_NUM_10, LEDC_CHANNEL_1);
+    Motor motorRU(GPIO_NUM_42, LEDC_CHANNEL_2);
+    Motor motorRD(GPIO_NUM_41, LEDC_CHANNEL_3);
+
     // Communication Thread
     xTaskCreatePinnedToCore(Communication, "Communication", 4096, &context, 5, nullptr, 0);
 
     // Flight Thread
     while (true) {
         //IMUData imuData = imu.GetData();
-        //std::cout << "Accelerometer Data:" << std::endl;
-        //std::cout << "Acc_X: " << imuData.acc_x << std::endl;
-        //std::cout << "Acc_Y: " << imuData.acc_y << std::endl;
-        //std::cout << "Acc_Z: " << imuData.acc_z << std::endl;
 
-        //std::cout << "Gyroscope Data:" << std::endl;
-        //std::cout << "Gyr_X: " << imuData.gyr_x << std::endl;
-        //std::cout << "Gyr_Y: " << imuData.gyr_y << std::endl;
-        //std::cout << "Gyr_Z: " << imuData.gyr_z << std::endl;
+        //motorLU.SetThrottle(10.0f);
+        //motorLD.SetThrottle(10.0f);
+        //motorRU.SetThrottle(10.0f);
+        //motorRD.SetThrottle(10.0f);
 
         //std::cout << "VoltageMonitor Voltage: " << voltageMonitor.GetVoltage() << " V" << std::endl;
         //std::cout << "VoltageMonitor Current: " << voltageMonitor.GetCurrent() << " A" << std::endl;
