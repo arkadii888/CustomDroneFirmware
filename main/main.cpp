@@ -1,8 +1,11 @@
+#include <cstdint>
 #include <iostream>
 #include <sys/types.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
+
+#include "lwip/sockets.h"
 
 #include "I2C.h"
 #include "VoltageMonitor.h"
@@ -11,8 +14,28 @@
 #include "Wifi.h"
 
 void Communication(void *pvParameters) {
+    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    sockaddr_in server;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(8888);
+    server.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    bind(s, reinterpret_cast<sockaddr*>(&server), sizeof(server));
+
+    int recivedCode = 0;
+
     while(true) {
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        sockaddr_in client;
+        socklen_t socklen = sizeof(client);
+
+        recvfrom(s, &recivedCode, sizeof(recivedCode), 0, reinterpret_cast<sockaddr*>(&client), &socklen);
+        std::cout << "Communication: Code Recieved: " << recivedCode << std::endl;
+
+        if(recivedCode == 1) {
+            const char* reply = "Alive";
+            sendto(s, reply, strlen(reply), 0, reinterpret_cast<sockaddr*>(&client), socklen);
+        }
     }
 }
 
