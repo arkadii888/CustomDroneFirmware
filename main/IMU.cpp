@@ -35,14 +35,14 @@ IMU::IMU() {
     DisablePowersave(0x02);
     vTaskDelay(150 / portTICK_PERIOD_MS);
 
-    // Allocate Memory for GetData()
+    // Allocate Memory for GetRawData()
     tx_buffer = static_cast<uint8_t*>(heap_caps_calloc(14, 1, MALLOC_CAP_DMA));
     rx_buffer = static_cast<uint8_t*>(heap_caps_calloc(14, 1, MALLOC_CAP_DMA));
     tx_buffer[0] = 0x0C | 0x80;
 }
 
 IMU::~IMU() {
-    // Free Memory for GetData()
+    // Free Memory for GetRawData()
     free(tx_buffer);
     free(rx_buffer);
 }
@@ -152,7 +152,7 @@ void IMU::ConfigGyroscope() {
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 }
 
-IMUData IMU::GetData() {
+IMURawData IMU::GetRawData() {
     spi_transaction_t t = {};
     t.length = 14 * 8;
     t.tx_buffer = tx_buffer;
@@ -160,7 +160,7 @@ IMUData IMU::GetData() {
 
     ESP_ERROR_CHECK(spi_device_transmit(handle, &t));
 
-    IMUData data;
+    IMURawData data;
     data.acc_x = (rx_buffer[3] << 8) | rx_buffer[2];
     data.acc_y = (rx_buffer[5] << 8) | rx_buffer[4];
     data.acc_z = (rx_buffer[7] << 8) | rx_buffer[6];

@@ -2,7 +2,7 @@
 
 #include "driver/spi_master.h"
 
-struct IMUData {
+struct IMURawData {
     int16_t acc_x = 0;
     int16_t acc_y = 0;
     int16_t acc_z = 0;
@@ -17,7 +17,7 @@ public:
     IMU();
     ~IMU();
 
-    IMUData GetData();
+    IMURawData GetRawData();
 
 private:
     void CheckCommunication();

@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include <sys/types.h>
 #include <math.h>
@@ -93,18 +94,13 @@ extern "C" void app_main(void)
     Motor motorRU(GPIO_NUM_42, LEDC_CHANNEL_2);
     Motor motorRD(GPIO_NUM_41, LEDC_CHANNEL_3);
 
-    PIDController pitch(1.5f, 0.0f, 0.02f);
-    PIDController roll(1.5f, 0.0f, 0.02f);
-    PIDController yaw(2.5f, 0.0f, 0.0f);
+    PIDController pitch(0.4f, 0.1f, 0.04f);
+    PIDController roll(0.4f, 0.1f, 0.04f);
 
+    float baseThrottle = 65.0f;
     float currentPitch = 0.0f;
     float currentRoll = 0.0f;
-    float currentYaw = 0.0f;
-    float baseThrottle = 30.0f;
-    float desiredPitch = 0.0f;
-    float desiredRoll = 0.0f;
-    float desiredYaw = 0.0f;
-    float time = 0.01;
+    const float time = 0.004f;
 
     xTaskCreatePinnedToCore(Communication, "Communication", 4096, &context, 5, nullptr, 0);
 
@@ -113,34 +109,31 @@ extern "C" void app_main(void)
     }
 
     while (context.arm) {
-        IMUData imuData = imu.GetData();
+        IMURawData imuRawData = imu.GetRawData();
 
-        float accPitch = atan2(-imuData.acc_x, sqrt(imuData.acc_y * imuData.acc_y + imuData.acc_z * imuData.acc_z)) * (180.0f / M_PI);
-        float accRoll = atan2(imuData.acc_y, imuData.acc_z) * (180.0f / M_PI);
+        float accPitch = std::atan2(imuRawData.acc_y, imuRawData.acc_z) * (180 / M_PI);
+        float accRoll = std::atan2(imuRawData.acc_x, imuRawData.acc_z) * (180 / M_PI);
 
-        float gyroRateX = imuData.gyr_x / 131.0f;
-        float gyroRateY = imuData.gyr_y / 131.0f;
-        float gyroRateZ = imuData.gyr_z / 131.0f;
+        float gyrPitch = currentPitch + imuRawData.gyr_x / 16.384f * time;
+        float gyrRoll = currentRoll + (-imuRawData.gyr_y / 16.384f) * time;
 
-        currentPitch = 0.98f * (currentPitch + gyroRateY *  time) + 0.02f * accPitch;
-        currentRoll = 0.98f * (currentRoll + gyroRateX * time) + 0.02f * accRoll;
-        currentYaw += gyroRateZ * time;
+        currentPitch = 0.98f * gyrPitch + 0.02f * accPitch;
+        currentRoll = 0.98f * gyrRoll + 0.02f * accRoll;
 
-        float pPidOutput = pitch.Update(desiredPitch, currentPitch, time);
-        float rPidOutput = roll.Update(desiredRoll, currentRoll, time);
-        float yPidOutput = yaw.Update(desiredYaw, currentYaw, time);
+        float pitchPidOutput = pitch.Update(0.0f, currentPitch, time);
+        float rollPidOutput = roll.Update(0.0f, currentRoll, time);
 
-        float pwrLU = baseThrottle + pPidOutput + rPidOutput - yPidOutput;
-        float pwrLD = baseThrottle - pPidOutput + rPidOutput + yPidOutput;
-        float pwrRU = baseThrottle + pPidOutput - rPidOutput + yPidOutput;
-        float pwrRD = baseThrottle - pPidOutput - rPidOutput - yPidOutput;
+        float pwrLU = baseThrottle + pitchPidOutput - rollPidOutput;
+        float pwrLD = baseThrottle - pitchPidOutput - rollPidOutput;
+        float pwrRU = baseThrottle + pitchPidOutput + rollPidOutput;
+        float pwrRD = baseThrottle - pitchPidOutput + rollPidOutput;
 
-        motorLU.SetThrottle(std::clamp(pwrLU, 0.0f, 100.0f));
-        motorLD.SetThrottle(std::clamp(pwrLD, 0.0f, 100.0f));
-        motorRU.SetThrottle(std::clamp(pwrRU, 0.0f, 100.0f));
-        motorRD.SetThrottle(std::clamp(pwrRD, 0.0f, 100.0f));
+        motorLU.SetThrottle(pwrLU);
+        motorLD.SetThrottle(pwrLD);
+        motorRU.SetThrottle(pwrRU);
+        motorRD.SetThrottle(pwrRD);
 
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(4 / portTICK_PERIOD_MS);
     }
 
     motorLU.SetThrottle(0.0f);
